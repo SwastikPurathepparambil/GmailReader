@@ -3,3 +3,4 @@ token.json
 cursor.json
 subscriber_key.json
 *.json
+.env

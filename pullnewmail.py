@@ -4,6 +4,7 @@ import base64
 from google.cloud import pubsub_v1
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
+from filtermail import filterEmail
 
 PROJECT_ID = "emailreader-472800"
 SUBSCRIPTION_ID = "gmail-updates-sub"
@@ -117,12 +118,15 @@ def process_changes(service, start_history_id):
         else:
             body_printable = body_text
 
-        print("New email:",
-            "From:", from_,
-            "| Subject:", subject,
-            "\n--- Body start ---\n",
-            body_printable.strip()[:2000],   # keep terminal output tidy
-            "\n--- Body end ---\n")
+        # filter email
+        # print("New email:",
+        #     "From:", from_,
+        #     "| Subject:", subject,
+        #     "\n--- Body start ---\n",
+        #     body_printable.strip()[:2000],   # keep terminal output tidy
+        #     "\n--- Body end ---\n")
+        filterEmail(sender=from_, subject=subject, body=body_printable)
+
     if latest_id != start_history_id:
         save_cursor(latest_id)
     return latest_id
