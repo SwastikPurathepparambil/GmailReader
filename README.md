@@ -28,7 +28,7 @@ GmailReader listens for new Gmail messages through Google Pub/Sub, extracts the 
 - Pub/Sub Docs: https://cloud.google.com/pubsub/docs/overview
 - OAuth 2.0 for APIs: https://developers.google.com/identity/protocols/oauth2
 
-# JSON files (not included in GitHub, but referenced in code files
+# JSON files (not included in GitHub, but referenced in code files)
 
 - **`client_secret.json`** – OAuth client credentials downloaded from Google Cloud, used on first run to obtain the user’s Gmail API access token.  
 - **`cursor.json`** – Tracks the last processed Gmail `historyId` so the app can resume syncing from where it left off.  
