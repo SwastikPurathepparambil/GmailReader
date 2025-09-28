@@ -1,7 +1,7 @@
 # GmailReader
 
 GmailReader is a Python service that listens for new Gmail messages through Google Pub/Sub, extracts the email content, 
-and passes it into custom business logic (`filterEmail`).
+and passes it into custom filtering logic (`filterEmail`).
 
 ---
 
