@@ -23,7 +23,7 @@ and passes it into custom business logic (`filterEmail`).
 3. **Run the watch file**
    python pullnewmail.py
 
-**Useful Links**
+## Useful Links
 - Gmail API: https://developers.google.com/workspace/gmail/api/reference/rest
 - Gmail Push Notifs: https://developers.google.com/workspace/gmail/api/guides/push
 - Pub/Sub Docs: https://cloud.google.com/pubsub/docs/overview
