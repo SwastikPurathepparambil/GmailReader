@@ -1,3 +1,5 @@
+# All good
+# Not important
 import base64
 from email.message import EmailMessage
 from googleapiclient.discovery import build
@@ -34,7 +36,7 @@ def get_user_creds():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # Use your downloaded OAuth client JSON file here:
+            # USE OAuth CLIENT JSON FILE HERE:
             flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
             creds = flow.run_local_server(port=8080, redirect_uri_trailing_slash=True)
 
@@ -45,7 +47,6 @@ def get_user_creds():
 def quickstart():
     creds = get_user_creds()
     try:
-        # Call the Gmail API
         service = build("gmail", "v1", credentials=creds)
         results = service.users().messages().list(userId="me", q="is:unread").execute()
         # messages = results.get()

@@ -1,17 +1,38 @@
 import re
-import time, json
+import os
+import json
 import base64
 from google.cloud import pubsub_v1
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from filtermail import filterEmail
+from google.cloud import pubsub_v1
+from google.cloud.pubsub_v1.types import FlowControl
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
+from tools import get_google_service
 
+SCOPES = ["https://mail.google.com/"]
 PROJECT_ID = "emailreader-472800"
 SUBSCRIPTION_ID = "gmail-updates-sub"
 CURSOR_FILE = "cursor.json"
+SEEN_FILE = "seen_ids.json"
+
+# checks for previously seen messages so we don't get repeats
+def load_seen():
+    try:
+        with open(SEEN_FILE) as f:
+            return set(json.load(f))
+    except Exception:
+        return set()
+
+def save_seen(seen):
+    with open(SEEN_FILE, "w") as f:
+        json.dump(list(seen), f)
 
 
-def _b64url_decode(data: str) -> bytes:
+
+def _b64url_decode(data):
     # Gmail uses base64url without padding; add it back if needed.
     padding = '=' * (-len(data) % 4)
     return base64.urlsafe_b64decode(data + padding)
@@ -94,66 +115,107 @@ def process_changes(service, start_history_id):
     ).execute()
 
     latest_id = start_history_id
+    seen = load_seen()  # load previously seen message IDs
+
     for h in resp.get("history", []):
         latest_id = h["id"]
         for m in h.get("messagesAdded", []):
+            msg_id = m["message"]["id"]
+
+            # skip if already processed
+            if msg_id in seen:
+                continue
+
             msg = service.users().messages().get(
-            userId="me",
-            id=m["message"]["id"],
-            format="full"
-        ).execute()
+                userId="me",
+                id=msg_id,
+                format="full"
+            ).execute()
 
-        # Headers (From, Subject)
-        headers = msg["payload"]["headers"]
-        from_ = header(headers, "From")
-        subject = header(headers, "Subject")
+            # Headers (From, Subject)
+            headers = msg["payload"]["headers"]
+            from_ = header(headers, "From")
+            subject = header(headers, "Subject")
 
-        # Body (prefer text/plain, fallback to text/html)
-        body_text, mime = extract_body_from_message(msg, prefer="plain")
+            # Body (prefer text/plain, fallback to text/html)
+            body_text, mime = extract_body_from_message(msg, prefer="plain")
+            if mime == "text/html":
+                body_printable = re.sub(r"<[^>]+>", "", body_text)
+            else:
+                body_printable = body_text
 
-        # If only HTML is available and you want quick plain text, strip tags:
-        if mime == "text/html":
-            # optional: quick-and-dirty strip; for better results, use BeautifulSoup
-            body_printable = re.sub(r"<[^>]+>", "", body_text)
-        else:
-            body_printable = body_text
+            # filter email
+            filterEmail(sender=from_, subject=subject, body=body_printable)
 
-        # filter email
-        # print("New email:",
-        #     "From:", from_,
-        #     "| Subject:", subject,
-        #     "\n--- Body start ---\n",
-        #     body_printable.strip()[:2000],   # keep terminal output tidy
-        #     "\n--- Body end ---\n")
-        filterEmail(sender=from_, subject=subject, body=body_printable)
+            # mark as processed
+            seen.add(msg_id)
 
     if latest_id != start_history_id:
         save_cursor(latest_id)
+    save_seen(seen)
     return latest_id
+
+
+
+
+
+def get_user_creds():
+    creds = None
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            # Use your downloaded OAuth client JSON file here:
+            flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
+            creds = flow.run_local_server(
+                port=8080, 
+                redirect_uri_trailing_slash=True,
+                access_type="offline",
+                prompt="consent"
+            )
+
+        with open("token.json", "w") as f:
+            f.write(creds.to_json())
+    return creds
 
 def pullmail():
     # Load Gmail creds from your token.json
-    creds = Credentials.from_authorized_user_file("token.json", ["https://mail.google.com/"])
-    service = build("gmail", "v1", credentials=creds)
+    service = get_google_service(
+        api_name="gmail",
+        api_version="v1",
+        scopes=SCOPES,
+        credentials_file="client_secret.json",
+        token_file="token.json",
+    )
 
+    # IF THE ENVIRONMENT GETS RESET
+    # NEED TO export GOOGLE_APPLICATION_CREDENTIALS="/Users/swastik/Desktop/gmailreader/subscriber_key.json"
     # Pub/Sub subscriber (needs GOOGLE_APPLICATION_CREDENTIALS env var set to a service account JSON)
+    
     subscriber = pubsub_v1.SubscriberClient()
     sub_path = subscriber.subscription_path(PROJECT_ID, SUBSCRIPTION_ID)
 
-    # Ensure we have a starting cursor
     if not load_cursor():
         process_changes(service, None)
 
-    def callback(message: pubsub_v1.subscriber.message.Message) -> None:
+    def callback(message: pubsub_v1.subscriber.message.Message):
         try:
             message.ack()
-            # Each notification => fetch changes since our last cursor
+            # Each notification => fetch changes since last cursor
             start_hid = load_cursor()
             process_changes(service, start_hid)
         except Exception as e:
             print("Callback error:", e)
+    
+    flow = FlowControl(max_messages=1)  # pull 1 at a time
 
-    streaming_future = subscriber.subscribe(sub_path, callback=callback)
+    streaming_future = subscriber.subscribe(
+        sub_path,
+        callback=callback,
+        flow_control=flow,
+    )
     print("Listening for new emails… Ctrl+C to stop")
 
     try:

@@ -2,5 +2,6 @@ client_secret.json
 token.json
 cursor.json
 subscriber_key.json
+seen_ids.json
 *.json
 .env
