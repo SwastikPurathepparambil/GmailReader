@@ -24,8 +24,8 @@ and passes it into custom business logic (`filterEmail`).
    python pullnewmail.py
 
 **Useful Links**
-Gmail API: https://developers.google.com/workspace/gmail/api/reference/rest
-Gmail Push Notifs: https://developers.google.com/workspace/gmail/api/guides/push
-Pub/Sub Docs: https://cloud.google.com/pubsub/docs/overview
-OAuth 2.0 for APIs: https://developers.google.com/identity/protocols/oauth2
+- Gmail API: https://developers.google.com/workspace/gmail/api/reference/rest
+- Gmail Push Notifs: https://developers.google.com/workspace/gmail/api/guides/push
+- Pub/Sub Docs: https://cloud.google.com/pubsub/docs/overview
+- OAuth 2.0 for APIs: https://developers.google.com/identity/protocols/oauth2
 
