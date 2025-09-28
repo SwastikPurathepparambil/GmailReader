@@ -1,0 +1,31 @@
+# GmailReader
+
+GmailReader is a Python service that listens for new Gmail messages through Google Pub/Sub, extracts the email content, 
+and passes it into custom business logic (`filterEmail`).
+
+---
+
+## Setup
+
+1. **Google Cloud Setup**
+   - Create a project in [Google Cloud Console](https://console.cloud.google.com/).
+   - Enable the **Gmail API** and **Pub/Sub API**.
+   - Create a Pub/Sub topic and subscription for Gmail push notifications.
+
+2. **Credentials**
+   - Download an OAuth **client_secret.json** for Gmail API (Desktop client).
+   - Run the script once to generate `token.json` (stored OAuth token).
+   - Create a **service account** with Pub/Sub subscriber rights and export its key JSON.
+   - Set the env variable:  
+     export GOOGLE_APPLICATION_CREDENTIALS="/path/to/subscriber_key.json"
+     
+
+3. **Run the watch file**
+   python pullnewmail.py
+
+**Useful Links**
+Gmail API: https://developers.google.com/workspace/gmail/api/reference/rest
+Gmail Push Notifs: https://developers.google.com/workspace/gmail/api/guides/push
+Pub/Sub Docs: https://cloud.google.com/pubsub/docs/overview
+OAuth 2.0 for APIs: https://developers.google.com/identity/protocols/oauth2
+
